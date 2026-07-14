@@ -1,0 +1,67 @@
+# Logs
+logs
+*.log
+*.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+node_modules/
+jspm_packages/
+web_reach/
+.pnp
+.pnp.*
+.yarn/
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
+# Env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Go binary and build files
+backend/bin/
+backend/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+backend/server
+backend/backend
+
+# IDE / Editor configuration
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Telephony records / Asterisk / local mounts
+asterisk/var/
+asterisk/log/
+asterisk/spool/

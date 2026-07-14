@@ -1,0 +1,224 @@
+version: "3.9"
+
+# ==============================================================
+# Omnichannel CRM & WebRTC PBX Platform — Docker Compose
+# ==============================================================
+
+networks:
+  crm_internal:
+    driver: bridge
+  crm_public:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redis_data:
+  rabbitmq_data:
+  minio_data:
+  asterisk_logs:
+  grafana_data:
+  loki_data:
+
+services:
+  # ─── Reverse Proxy ───────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: crm_nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - crm_public
+      - crm_internal
+    depends_on:
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_started
+
+  # ─── Go Backend API ─────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: crm_backend
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8080:8080"
+    networks:
+      - crm_internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # ─── Next.js Frontend ───────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: crm_frontend
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8080
+      - NEXT_PUBLIC_WS_URL=ws://backend:8080/ws
+    ports:
+      - "3000:3000"
+    networks:
+      - crm_internal
+
+  # ─── PostgreSQL 16 ──────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: crm_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-crm_platform}
+      POSTGRES_USER: ${POSTGRES_USER:-crm_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - crm_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crm_admin} -d ${POSTGRES_DB:-crm_platform}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis 7 ────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: crm_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-change-me} --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - crm_internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-change-me}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ─── RabbitMQ 3.13 ──────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: crm_rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-crm_broker}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-change-me}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - crm_internal
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # ─── MinIO (S3-Compatible Object Storage) ───────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: crm_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-crm_storage_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - crm_internal
+
+  # ─── Asterisk 20 PBX ────────────────────────────────────────
+  asterisk:
+    build:
+      context: ./asterisk
+      dockerfile: Dockerfile
+    container_name: crm_asterisk
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+      - "8089:8089"
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "10000-10100:10000-10100/udp"
+    volumes:
+      - asterisk_logs:/var/log/asterisk
+      - ./asterisk/conf:/etc/asterisk/custom:ro
+    networks:
+      - crm_internal
+
+  # ─── Prometheus ─────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: crm_prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - crm_internal
+
+  # ─── Grafana ────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: crm_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me}
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - crm_internal
+
+  # ─── Loki (Log Aggregation) ─────────────────────────────────
+  loki:
+    image: grafana/loki:3.1.0
+    container_name: crm_loki
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - crm_internal
+
+  # ─── Promtail (Log Shipper) ─────────────────────────────────
+  promtail:
+    image: grafana/promtail:3.1.0
+    container_name: crm_promtail
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - crm_internal

@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+:root {
+  --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4B5563; }
+
+/* Smooth transitions */
+* { transition-property: color, background-color, border-color, box-shadow; transition-duration: 150ms; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+.animate-fade-in { animation: fadeIn 0.3s ease-out; }
+.animate-slide-in { animation: slideIn 0.3s ease-out; }
+.animate-scale-in { animation: scaleIn 0.2s ease-out; }
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #818cf8, #a78bfa, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Glass card */
+.glass-card {
+  background: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+/* Stat card hover */
+.stat-card {
+  background: rgba(17, 24, 39, 0.6);
+  border: 1px solid rgba(75, 85, 99, 0.25);
+  transition: all 0.25s ease;
+}
+.stat-card:hover {
+  background: rgba(17, 24, 39, 0.8);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Table styles */
+.crm-table th { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #9CA3AF; }
+.crm-table td { font-size: 0.875rem; padding: 0.75rem 1rem; border-bottom: 1px solid rgba(75, 85, 99, 0.2); }
+.crm-table tr:hover td { background: rgba(99, 102, 241, 0.04); }
+
+/* Badge */
+.badge { display: inline-flex; align-items: center; padding: 0.125rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+.badge-new { background: rgba(59, 130, 246, 0.15); color: #60A5FA; }
+.badge-active { background: rgba(16, 185, 129, 0.15); color: #34D399; }
+.badge-won { background: rgba(168, 85, 247, 0.15); color: #C084FC; }
+.badge-lost { background: rgba(239, 68, 68, 0.15); color: #F87171; }
