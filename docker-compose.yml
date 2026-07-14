@@ -1,4 +1,4 @@
-version: "3.9"
+# docker-compose — Omnichannel CRM & WebRTC PBX Platform
 
 # ==============================================================
 # Omnichannel CRM & WebRTC PBX Platform — Docker Compose
@@ -159,8 +159,8 @@ services:
     container_name: crm_asterisk
     restart: unless-stopped
     ports:
-      - "8088:8088"
-      - "8089:8089"
+      - "18088:8088"   # ARI HTTP  (host:18088 → container:8088)
+      - "18089:8089"   # ARI WSS   (host:18089 → container:8089)
       - "5060:5060/udp"
       - "5060:5060/tcp"
       - "10000-10100:10000-10100/udp"
