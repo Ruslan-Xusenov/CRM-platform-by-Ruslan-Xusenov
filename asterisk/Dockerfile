@@ -1,12 +1,15 @@
 # ==============================================================
 # Asterisk 20 PBX — Dockerfile
 # ==============================================================
-FROM debian:bookworm-slim
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install Asterisk 20 and required modules
+# Install Asterisk and required modules
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    && add-apt-repository universe \
+    && apt-get update && apt-get install -y --no-install-recommends \
     asterisk \
     asterisk-modules \
     asterisk-core-sounds-en \
